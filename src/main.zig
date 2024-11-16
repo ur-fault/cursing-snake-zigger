@@ -100,6 +100,17 @@ const Player = struct {
             return UpdateResult.death;
         }
 
+        brk: {
+            var body_part = (self.pos.first orelse break :brk).next;
+            while (body_part) |n| {
+                if (self.getPos().eq(n.data)) {
+                    return UpdateResult.death;
+                }
+
+                body_part = n.next;
+            }
+        }
+
         return UpdateResult.none;
     }
 
@@ -115,6 +126,14 @@ const Player = struct {
         while (self.pos.pop()) |node| {
             _ = self.alloc.destroy(node);
         }
+    }
+};
+
+const Time = struct {
+    const speed = 10;
+
+    pub fn getFrame() i64 {
+        return @divFloor(std.time.milliTimestamp() * speed, 1000);
     }
 };
 
@@ -173,14 +192,6 @@ pub fn main() !void {
 
     var apple = applePos(rng, &player);
 
-    const Time = struct {
-        const speed = 200;
-
-        pub fn getFrame() i64 {
-            return @divFloor(std.time.milliTimestamp(), speed);
-        }
-    };
-
     var frame = Time.getFrame();
 
     while (true) {
@@ -216,10 +227,12 @@ pub fn main() !void {
             Player.UpdateResult.none => {},
         }
 
-        while (Time.getFrame() == frame) {
-            std.time.sleep(@divFloor(Time.speed, 2));
-        }
+        while (Time.getFrame() == frame) {}
 
         frame = Time.getFrame();
     }
+
+    var buf: [100:0]u8 = undefined;
+    const written = (try std.fmt.bufPrint(&buf, "Score: {d}", .{score}));
+    _ = c.mvwaddnstr(win, 0, 0, @ptrCast(written), @intCast(written.len));
 }
